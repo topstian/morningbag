@@ -1,0 +1,45 @@
+version: "3"
+services:
+    hidata:
+        image: redis:6.2.1-alpine
+        env_file:
+            - ./.env
+        volumes:
+            - hidata:/data
+        restart: "${HIDATA_RESTART_POLICY:-no}"
+    backend:
+        build:
+            context: .
+            dockerfile: Dockerfile.app
+        env_file:
+            - ./.env
+        volumes:
+            - .:/var/www/morningbag
+        depends_on:
+            - hidata
+        command: bundle exec sidekiq -C ./config/sidekiq.yml -r ./config/initializers/backend.rb
+        restart: "${BACKEND_RESTART_POLICY:-no}"
+    frontend:
+        build:
+            context: .
+            dockerfile: Dockerfile.app
+        env_file:
+            - ./.env
+        volumes:
+            - .:/var/www/morningbag
+        command: bundle exec puma -C ./config/puma.rb
+        restart: "${FRONTEND_RESTART_POLICY:-no}"
+    gateway:
+        build:
+            context: .
+            dockerfile: Dockerfile.gateway
+        env_file:
+            - ./.env
+        depends_on:
+            - frontend
+        ports:
+            - "${GATEWAY_HTTPS_PORT:-443}:443"
+            - "${GATEWAY_HTTP_PORT:-80}:80"
+        restart: "${GATEWAY_RESTART_POLICY:-no}"
+volumes:
+    hidata:

@@ -1,0 +1,31 @@
+on: [pull_request]
+jobs:
+  rubocop:
+    name: Rubocop
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v1
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.0.0
+      - name: rubocop
+        uses: reviewdog/action-rubocop@v2
+        with:
+          rubocop_version: gemfile
+          rubocop_extensions: rubocop-rails:gemfile rubocop-rspec:gemfile
+          reporter: github-pr-review
+  rspec:
+    name: RSpec
+    needs: rubocop
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v1
+      - name: Generate self-signed certificates
+        run: openssl req -nodes -newkey rsa:2048 -keyout gateway.key -out gateway.crt -subj "/C=CL/ST=Santiago/L=Santiago/O=morningbag/OU=morningbag/CN=localhost"
+      - name: Touch .env
+        run: touch .env
+      - name: Run tests
+        run: sh ./tasks/run_tests.sh
+
